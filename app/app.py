@@ -100,4 +100,4 @@ demo = gr.TabbedInterface(
     title="RMBG-2.0 for background removal"
 )
 
-demo.launch(share=False, quiet=True)
+demo.launch(share=False)
