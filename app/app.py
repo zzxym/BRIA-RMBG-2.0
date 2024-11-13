@@ -6,13 +6,22 @@ from transformers import AutoModelForImageSegmentation
 import torch
 from torchvision import transforms
 from datetime import datetime
+import devicetorch
+
+import warnings
+# Suppress specific timm deprecation warnings
+warnings.filterwarnings('ignore', category=FutureWarning, module='timm')
+
+# Get the appropriate device
+device = devicetorch.get(torch)
 
 torch.set_float32_matmul_precision(["high", "highest"][0])
 
 birefnet = AutoModelForImageSegmentation.from_pretrained(
     "briaai/RMBG-2.0", trust_remote_code=True
 )
-birefnet.to("cuda")
+birefnet = devicetorch.to(torch, birefnet)  # Move model to appropriate device
+
 transform_image = transforms.Compose(
     [
         transforms.Resize((1024, 1024)),
@@ -41,7 +50,8 @@ def fn(image):
 
 def process(image):
     image_size = image.size
-    input_images = transform_image(image).unsqueeze(0).to("cuda")
+    input_images = transform_image(image).unsqueeze(0)
+    input_images = devicetorch.to(torch, input_images) 
     # Prediction
     with torch.no_grad():
         preds = birefnet(input_images)[-1].sigmoid().cpu()
@@ -49,6 +59,8 @@ def process(image):
     pred_pil = transforms.ToPILImage()(pred)
     mask = pred_pil.resize(image_size)
     image.putalpha(mask)
+    # Clean up GPU/MPS memory
+    devicetorch.empty_cache(torch)
     return image
   
 def process_file(f):
@@ -69,19 +81,23 @@ png_file = gr.File(label="output png file")
 
 tab1 = gr.Interface(
     fn, inputs=image, outputs=[slider1, gr.File(label="output png file")],
-    allow_flagging="never"  # Disable flagging
+    allow_flagging="never"
 )
 
 tab2 = gr.Interface(
     fn, inputs=text, outputs=[slider2, gr.File(label="output png file")],
-    allow_flagging="never"  # Disable flagging
+    allow_flagging="never"
+)
+
+tab3 = gr.Interface(
+    process_file, inputs=image2, outputs=png_file,
+    allow_flagging="never"
 )
 
 demo = gr.TabbedInterface(
-    [tab1, tab2], 
-    ["Input Image", "Input URL",],  
-    title="RMBG-2.0 - background removal"
+    [tab1, tab2, tab3],
+    ["Input Image", "Input URL", "File Upload"],
+    title="RMBG-2.0 for background removal"
 )
 
-if __name__ == "__main__":
-    demo.launch(share=False)
+demo.launch(share=False, quiet=True)
