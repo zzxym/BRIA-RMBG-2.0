@@ -30,7 +30,7 @@ transform_image = transforms.Compose(
     ]
 )
 
-output_folder = 'output_images'
+output_folder = '../output_images'
 if not os.path.exists(output_folder):
     os.makedirs(output_folder)
 
