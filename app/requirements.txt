@@ -1,3 +1,5 @@
+devicetorch
+diffusers
 accelerate
 opencv-python
 pillow
