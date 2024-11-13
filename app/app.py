@@ -35,7 +35,7 @@ if not os.path.exists(output_folder):
     os.makedirs(output_folder)
 
 def generate_filename():
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    timestamp = datetime.now().strftime("%y%m%d_%H%M%S")
     return f"no_bg_{timestamp}.png"
 
 def fn(image):
